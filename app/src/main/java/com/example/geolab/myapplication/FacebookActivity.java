@@ -32,10 +32,9 @@ public class FacebookActivity extends AppCompatActivity {
 
     CallbackManager callbackManager;
     ImageView imageView;
-    TextView textView,view;
+    TextView textView, view;
     AccessToken accessToken;
-    String fname,url;
-    int user;
+    String fname, profilePicUrl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,83 +43,47 @@ public class FacebookActivity extends AppCompatActivity {
         FacebookSdk.sdkInitialize(getApplicationContext());
         setContentView(R.layout.activity_main);
 
-        imageView= (ImageView) findViewById(R.id.imageView);
-        textView= (TextView) findViewById(R.id.textView);
-        view= (TextView) findViewById(R.id.textView2);
+        imageView = (ImageView) findViewById(R.id.imageView);
+        textView = (TextView) findViewById(R.id.textView);
+        view = (TextView) findViewById(R.id.textView2);
 
         accessToken = AccessToken.getCurrentAccessToken();
 
-        callbackManager=CallbackManager.Factory.create();
-        LoginManager.getInstance().logInWithReadPermissions(this,Arrays.asList("email", "user_photos", "public_profile"));
+        callbackManager = CallbackManager.Factory.create();
+        LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("email", "user_photos", "public_profile"));
 
         LoginManager.getInstance().registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
 
-//                GraphRequest.newMeRequest(loginResult.getAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
-//                    @Override
-//                    public void onCompleted(JSONObject object, GraphResponse response) {
-//
-//                        if (response.getError() != null) {
-//                            System.out.println("ERROR");
-//
-//                        }else {
-//                            try {
-//                                user = object.getInt("id");
-//                                fname = object.getString("name");
-//                                view.setText(fname);
-//
-//                            } catch (JSONException e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//                    }
-//                }).executeAsync();
-
-
-                System.out.println(user);
+                Bundle params = new Bundle();
+                params.putString("fields", "id,name,email,gender,cover,picture.type(large)");
                 new GraphRequest(
                         AccessToken.getCurrentAccessToken(),
-                        "/me",
-                        null,
+                        "me",
+                        params,
                         HttpMethod.GET,
                         new GraphRequest.Callback() {
                             public void onCompleted(GraphResponse response) {
+                                if (response != null) {
+                                    try {
+                                        JSONObject data = response.getJSONObject();
+                                        fname = response.getJSONObject().getString("name");
+                                        textView.setText(fname);
+                                        if (data.has("picture")) {
+                                            profilePicUrl = data.getJSONObject("picture").getJSONObject("data").getString("url");
+                                            Picasso.with(FacebookActivity.this)
+                                                    .load(profilePicUrl)
+                                                    .into(imageView);
+                                        }
 
-                                try {
-                                    user=response.getJSONObject().getInt("id");
-                                    fname=response.getJSONObject().getString("name");
-                                    textView.setText(fname);
-
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
                                 }
                             }
-                        }
-                ).executeAsync();
-
-
-                new GraphRequest(
-                        AccessToken.getCurrentAccessToken(),
-                        "/{"+ user+"}/picture",
-                        null,
-                        HttpMethod.GET,
-                        new GraphRequest.Callback() {
-                            public void onCompleted(GraphResponse response) {
-            /* handle the result */
-                                try {
-                                    url = response.getJSONObject().getString("picture");
-                                    System.out.println(url);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-
-                            }
-                        }
-                ).executeAsync();
-
+                        }).executeAsync();
             }
-
 
 
             @Override
@@ -136,6 +99,7 @@ public class FacebookActivity extends AppCompatActivity {
 
 
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
