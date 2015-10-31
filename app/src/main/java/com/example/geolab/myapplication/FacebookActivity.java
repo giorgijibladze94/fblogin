@@ -18,7 +18,9 @@ import com.facebook.HttpMethod;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
+import com.squareup.picasso.Picasso;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -31,6 +33,9 @@ public class FacebookActivity extends AppCompatActivity {
     CallbackManager callbackManager;
     ImageView imageView;
     TextView textView,view;
+    AccessToken accessToken;
+    String fname,url;
+    int user;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,16 +46,82 @@ public class FacebookActivity extends AppCompatActivity {
 
         imageView= (ImageView) findViewById(R.id.imageView);
         textView= (TextView) findViewById(R.id.textView);
-        textView= (TextView) findViewById(R.id.textView2);
+        view= (TextView) findViewById(R.id.textView2);
 
-        FacebookSdk.sdkInitialize(getApplicationContext());
-        callbackManager = CallbackManager.Factory.create();
-        LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
-        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+        accessToken = AccessToken.getCurrentAccessToken();
+
+        callbackManager=CallbackManager.Factory.create();
+        LoginManager.getInstance().logInWithReadPermissions(this,Arrays.asList("email", "user_photos", "public_profile"));
+
+        LoginManager.getInstance().registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
 
+//                GraphRequest.newMeRequest(loginResult.getAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
+//                    @Override
+//                    public void onCompleted(JSONObject object, GraphResponse response) {
+//
+//                        if (response.getError() != null) {
+//                            System.out.println("ERROR");
+//
+//                        }else {
+//                            try {
+//                                user = object.getInt("id");
+//                                fname = object.getString("name");
+//                                view.setText(fname);
+//
+//                            } catch (JSONException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
+//                    }
+//                }).executeAsync();
+
+
+                System.out.println(user);
+                new GraphRequest(
+                        AccessToken.getCurrentAccessToken(),
+                        "/me",
+                        null,
+                        HttpMethod.GET,
+                        new GraphRequest.Callback() {
+                            public void onCompleted(GraphResponse response) {
+
+                                try {
+                                    user=response.getJSONObject().getInt("id");
+                                    fname=response.getJSONObject().getString("name");
+                                    textView.setText(fname);
+
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                ).executeAsync();
+
+
+                new GraphRequest(
+                        AccessToken.getCurrentAccessToken(),
+                        "/{"+ user+"}/picture",
+                        null,
+                        HttpMethod.GET,
+                        new GraphRequest.Callback() {
+                            public void onCompleted(GraphResponse response) {
+            /* handle the result */
+                                try {
+                                    url = response.getJSONObject().getString("picture");
+                                    System.out.println(url);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }
+                        }
+                ).executeAsync();
+
             }
+
+
 
             @Override
             public void onCancel() {
@@ -62,19 +133,6 @@ public class FacebookActivity extends AppCompatActivity {
 
             }
         });
-        LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("public_profile", "user_friends"));
-
-
-
-        new GraphRequest(AccessToken.getCurrentAccessToken(),null, HttpMethod.GET, new GraphRequest.Callback() {
-            @Override
-            public void onCompleted(GraphResponse response) {
-
-
-                JSONObject profile = new JSONObject((Map) response);
-
-            }
-        }).executeAsync();
 
 
     }
